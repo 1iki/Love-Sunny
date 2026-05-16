@@ -27,8 +27,8 @@ test.describe('Love Sunny Core Flow', () => {
     await expect(pairingModal).toBeVisible({ timeout: 15000 });
     
     // Fill in the Nickname and Partner Username.
-    await page.getByPlaceholder(/nickname/i).fill('MyNickname');
-    await page.getByPlaceholder(/partner username/i).fill('partner_username');
+    await page.getByPlaceholder('What your partner calls you').fill('MyNickname');
+    await page.getByPlaceholder('Their exact username').fill('partner_username');
     
     // Click "Connect Accounts".
     await page.getByRole('button', { name: /connect accounts/i }).click();
