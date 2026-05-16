@@ -2,15 +2,20 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Love Sunny Core Flow', () => {
   test('Complete user journey: registration, pairing, add note, view milestones', async ({ page }) => {
+    // Generate unique user data to prevent database collision on retries
+    const uniqueId = Date.now();
+    const uniqueUsername = `testuser_${uniqueId}`;
+    const uniqueEmail = `test_${uniqueId}@email.com`;
+
     // Step 1: Navigate to /auth.
     await page.goto('/auth');
     
     // Step 2 (Register): Click the "Sign up" toggle button.
     await page.getByRole('button', { name: /sign up/i }).click();
     
-    // Fill in Username, Email, and Password.
-    await page.getByPlaceholder('Enter your username').fill('testuser');
-    await page.getByPlaceholder('your@email.com').fill('testuser@example.com');
+    // Fill in Username, Email, and Password with dynamic data.
+    await page.getByPlaceholder('Enter your username').fill(uniqueUsername);
+    await page.getByPlaceholder('your@email.com').fill(uniqueEmail);
     await page.getByPlaceholder('••••••••').fill('password123');
     
     // Click the "Create Account" button.
@@ -18,7 +23,7 @@ test.describe('Love Sunny Core Flow', () => {
     
     // Step 3 (Pairing): Wait for the Pairing Modal.
     // The pairing modal should appear after successful registration.
-    const pairingModal = page.getByRole('dialog').or(page.locator('.bg-white'));
+    const pairingModal = page.getByRole('heading', { name: /Connect with your Partner/i });
     await expect(pairingModal).toBeVisible({ timeout: 15000 });
     
     // Fill in the Nickname and Partner Username.
