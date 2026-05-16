@@ -1,0 +1,96 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: 'your-gcp-project-id' # Replace with your GCP project ID or use a secret
+  REGION: 'asia-southeast2'
+  SERVICE_NAME: 'love-sunny'
+  # Consider using Artifact Registry (us-central1-docker.pkg.dev/...) instead of GCR
+  IMAGE_NAME: 'gcr.io/your-gcp-project-id/love-sunny'
+
+jobs:
+  test:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+  deploy:
+    name: Build & Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io --quiet
+
+      - name: Discover or Reserve Cloud Run URL
+        id: get-url
+        run: |
+          if gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} >/dev/null 2>&1; then
+            BASE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format="value(status.url)")
+            echo "URL found: $BASE_URL"
+          else
+            echo "Service does not exist yet. Deploying dummy to reserve URL..."
+            gcloud run deploy ${{ env.SERVICE_NAME }} \
+              --image="us-docker.pkg.dev/cloudrun/container/hello" \
+              --region="${{ env.REGION }}" \
+              --allow-unauthenticated \
+              --quiet
+            
+            BASE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format="value(status.url)")
+            echo "URL reserved: $BASE_URL"
+          fi
+          echo "BASE_URL=$BASE_URL" >> $GITHUB_ENV
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_BASE_URL=${{ env.BASE_URL }} \
+            -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:latest .
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.IMAGE_NAME }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --set-env-vars="MONGODB_URI=${{ secrets.MONGODB_URI }},JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            --allow-unauthenticated \
+            --quiet
