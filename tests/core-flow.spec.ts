@@ -6,12 +6,12 @@ test.describe('Love Sunny Core Flow', () => {
     await page.goto('/auth');
     
     // Fill in mock credentials
-    await page.getByPlaceholder('Email').fill('test@lovesunny.app');
-    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByPlaceholder('Enter your username').fill('testuser');
+    await page.getByPlaceholder('••••••••').fill('password123');
     
     // Select role if registering/needed (assuming a standard login form here)
     // Clicking the "Login to your account" or equivalent submit button
-    const submitButton = page.getByRole('button', { name: /start tracking|login/i });
+    const submitButton = page.getByRole('button', { name: /Sign In/i });
     if (await submitButton.isVisible()) {
       await submitButton.click();
     }

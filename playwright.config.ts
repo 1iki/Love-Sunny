@@ -23,7 +23,7 @@ export default defineConfig({
 
   // Bagian terpenting: Menjalankan server Next.js otomatis sebelum testing
   webServer: {
-    command: 'npm run build && npm run start',
+    command: 'npm run build && PORT=3000 node .next/standalone/server.js',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // Memberikan waktu 2 menit untuk build
