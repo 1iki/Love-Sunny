@@ -34,6 +34,10 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test
+        env:
+          MONGODB_URI: "mongodb://localhost:27017/mock_db" # URL dummy untuk testing
+          JWT_SECRET: "mock_secret_for_testing_only"
+          NEXT_PUBLIC_BASE_URL: "http://localhost:3000"
 
   deploy:
     name: Build & Deploy
